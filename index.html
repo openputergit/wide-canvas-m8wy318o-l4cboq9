@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Endless Mountain Bike Adventure</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        #gameCanvas {
+            background: linear-gradient(skyblue, #87CEEB);
+        }
+        .control-btn {
+            @apply bg-blue-500 text-white p-4 rounded-full shadow-lg active:bg-blue-600 
+            transition-all duration-200 text-xl;
+        }
+        .selection-item {
+            @apply p-4 m-2 border-2 rounded-lg cursor-pointer transition-all duration-200 
+            hover:border-blue-500;
+        }
+        @media (max-width: 768px) {
+            .control-btn {
+                @apply p-3;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div id="menu" class="fixed inset-0 z-50 bg-gray-900 flex flex-col items-center justify-center">
+        <h1 class="text-4xl mb-8 font-bold text-blue-500">Mountain Bike Adventure</h1>
+        
+        <div class="mb-8">
+            <h2 class="text-2xl mb-4">Select Your Bike</h2>
+            <div class="flex flex-wrap justify-center gap-4" id="bikeSelection">
+                <div class="selection-item" data-bike="sport">🏍 Sport Bike</div>
+                <div class="selection-item" data-bike="cruiser">🛵 Cruiser</div>
+                <div class="selection-item" data-bike="dirt">🏍 Dirt Bike</div>
+            </div>
+        </div>
+
+        <div class="mb-8">
+            <h2 class="text-2xl mb-4">Select Your Character</h2>
+            <div class="flex flex-wrap justify-center gap-4" id="characterSelection">
+                <div class="selection-item" data-character="rider1">👨 Rider 1</div>
+                <div class="selection-item" data-character="rider2">👩 Rider 2</div>
+                <div class="selection-item" data-character="rider3">🧑 Rider 3</div>
+            </div>
+        </div>
+
+        <button id="startGame" class="bg-blue-500 hover:bg-blue-600 text-white px-8 py-4 rounded-lg text-xl">
+            Start Game
+        </button>
+    </div>
+
+    <canvas id="gameCanvas" class="w-full h-screen"></canvas>
+
+    <div id="controls" class="fixed bottom-4 left-0 right-0 flex justify-center items-center gap-4 px-4" style="display: none;">
+        <button class="control-btn" id="brakeBtn"><i class="bi bi-square-fill"></i></button>
+        <button class="control-btn" id="leftBtn"><i class="bi bi-arrow-left-circle"></i></button>
+        <button class="control-btn" id="rightBtn"><i class="bi bi-arrow-right-circle"></i></button>
+        <button class="control-btn" id="boostBtn"><i class="bi bi-lightning-charge"></i></button>
+        <button class="control-btn" id="stuntBtn"><i class="bi bi-star"></i></button>
+    </div>
+
+    <script>
+        let canvas, ctx, gameLoop;
+        const game = {
+            player: {
+                x: 100,
+                y: 300,
+                speed: 5,
+                bike: 'sport',
+                character: 'rider1'
+            },
+            terrain: [],
+            obstacles: [],
+            score: 0
+        };
+
+        function initGame() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            // Generate initial terrain
+            generateTerrain();
+
+            // Start game loop
+            gameLoop = setInterval(updateGame, 1000/60);
+        }
+
+        function generateTerrain() {
+            // Simple terrain generation
+            let lastHeight = canvas.height / 2;
+            for(let x = 0; x < canvas.width; x += 50) {
+                lastHeight += (Math.random() - 0.5) * 50;
+                game.terrain.push({x, y: lastHeight});
+            }
+        }
+
+        function updateGame() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw terrain
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            game.terrain.forEach(point => {
+                ctx.lineTo(point.x, point.y);
+            });
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.fillStyle = '#4a5568';
+            ctx.fill();
+
+            // Draw player
+            ctx.fillStyle = 'red';
+            ctx.fillRect(game.player.x, game.player.y, 30, 30);
+
+            // Move terrain
+            game.terrain.forEach(point => {
+                point.x -= game.player.speed;
+            });
+
+            // Generate new terrain as needed
+            if(game.terrain[0].x <= 0) {
+                game.terrain.shift();
+                let lastPoint = game.terrain[game.terrain.length - 1];
+                let newY = lastPoint.y + (Math.random() - 0.5) * 50;
+                game.terrain.push({x: lastPoint.x + 50, y: newY});
+            }
+
+            // Update score
+            game.score += game.player.speed;
+            ctx.fillStyle = 'white';
+            ctx.font = '24px Arial';
+            ctx.fillText(`Score: ${Math.floor(game.score)}`, 20, 40);
+        }
+
+        // Event Listeners
+        document.getElementById('startGame').addEventListener('click', () => {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('controls').style.display = 'flex';
+            initGame();
+        });
+
+        // Control buttons
+        document.getElementById('brakeBtn').addEventListener('touchstart', () => game.player.speed = 2);
+        document.getElementById('brakeBtn').addEventListener('touchend', () => game.player.speed = 5);
+        document.getElementById('boostBtn').addEventListener('touchstart', () => game.player.speed = 8);
+        document.getElementById('boostBtn').addEventListener('touchend', () => game.player.speed = 5);
+        document.getElementById('leftBtn').addEventListener('touchstart', () => game.player.y -= 10);
+        document.getElementById('rightBtn').addEventListener('touchstart', () => game.player.y += 10);
+        document.getElementById('stuntBtn').addEventListener('click', () => {
+            // Simple stunt animation
+            game.player.y -= 50;
+            setTimeout(() => game.player.y += 50, 500);
+        });
+
+        // Keyboard controls for desktop
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowLeft': game.player.y -= 10; break;
+                case 'ArrowRight': game.player.y += 10; break;
+                case 'ArrowUp': game.player.speed = 8; break;
+                case 'ArrowDown': game.player.speed = 2; break;
+                case ' ': document.getElementById('stuntBtn').click(); break;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if(['ArrowUp', 'ArrowDown'].includes(e.key)) {
+                game.player.speed = 5;
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if(canvas) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+        });
+
+        // Bike and character selection
+        document.querySelectorAll('.selection-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const type = e.target.parentElement.id === 'bikeSelection' ? 'bike' : 'character';
+                document.querySelectorAll(`#${type}Selection .selection-item`).forEach(i => 
+                    i.classList.remove('border-blue-500'));
+                e.target.classList.add('border-blue-500');
+                game.player[type] = e.target.dataset[type];
+            });
+        });
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
